@@ -45,7 +45,7 @@ class Snake():
                 next_block = self.body[index - 1] - block
                 if previous_block.x == next_block.x:
                     screen.blit(self.body_vertical, snake_rect)
-                elif previous_block.y == next_block.x:
+                elif previous_block.y == next_block.y:
                     screen.blit(self.body_horizontal, snake_rect)
                 else:
                     if previous_block.x == -1 and next_block.y == -1 or next_block.x == -1 and previous_block.y == -1:
@@ -63,9 +63,9 @@ class Snake():
             self.head = self.head_left
         elif head_orientation == Vector2(-1, 0):
             self.head = self.head_right
-        elif head_orientation == Vector2(0, 1):
-            self.head = self.head_down
         elif head_orientation == Vector2(0, -1):
+            self.head = self.head_down
+        elif head_orientation == Vector2(0, 1):
             self.head = self.head_up
 
     def update_tail_graphics(self):
@@ -74,9 +74,9 @@ class Snake():
             self.tail = self.tail_right
         elif tail_orientation == Vector2(-1, 0):
             self.tail = self.tail_left
-        elif tail_orientation == Vector2(0, 1):
-            self.tail = self.tail_up
         elif tail_orientation == Vector2(0, -1):
+            self.tail = self.tail_up
+        elif tail_orientation == Vector2(0, 1):
             self.tail = self.tail_down
 
     def move_snake(self):
@@ -91,24 +91,25 @@ class Snake():
             body_copy.insert(0,body_copy[0] + self.direction)
             self.body = body_copy[:]
 
-        def add_block(self):
-            self.new_block = True
+    def add_block(self):
+        self.new_block = True
 
-        def play_crunch_sound(self):
-            self.crunch_sound.play()
+    def play_crunch_sound(self):
+        self.crunch_sound.play()
 
-        def reset(self):
-            self.body = [Vector2(5, 10), Vector2(4, 10), Vector2(3, 10)]
-            self.direction = Vector2(0, 0)
+    def reset(self):
+        self.body = [Vector2(5, 10), Vector2(4, 10), Vector2(3, 10)]
+        self.direction = Vector2(0, 0)
 
 
 class Fruit():
     def __init__(self):
         self.randomize()
+        self.apple = pygame.image.load('Graphics/apple.png').convert_alpha()
 
     def draw_fruit(self):
         fruit_rect = pygame.Rect(int(self.pos.x)*cell_size, int(self.pos.y)*cell_size, cell_size, cell_size)
-        screen.blit(apple,fruit_rect)
+        screen.blit(self.apple,fruit_rect)
 
     def randomize(self):
         self.x = random.randint(0, cell_number - 1)
@@ -121,10 +122,16 @@ class Main():
         self.snake = Snake()
         self.fruit = Fruit()
 
+    def update(self):
+        self.snake.move_snake()
+        self.check_collision()
+        self.check_fail()
+
     def draw_elements(self):
         self.draw_grass()
         self.fruit.draw_fruit()
         self.snake.draw_snake()
+        self.draw_score()
 
     def draw_grass(self):
         global grass_colour
@@ -161,8 +168,23 @@ class Main():
     def game_over(self):
         self.snake.reset()
 
+    def draw_score(self):
+        score_text = str(len(self.snake.body) - 3)
+        score_surface = game_font.render(score_text,True,(56,74,12))
+        score_x = int(cell_size * cell_number - 60)
+        score_y = int(cell_size * cell_number - 40)
+        score_rect = score_surface.get_rect(center = (score_x, score_y))
+        apple_rect = self.fruit.apple.get_rect(midright=(score_rect.left, score_rect.centery))
+        bg_rect = pygame.Rect(apple_rect.left, apple_rect.top, apple_rect.width + score_rect.width + 6, apple_rect.height)
+
+        pygame.draw.rect(screen, (167, 209, 61), bg_rect)
+        screen.blit(score_surface, score_rect)
+        screen.blit(self.fruit.apple, apple_rect)
+        pygame.draw.rect(screen, (56, 74, 12), bg_rect, 2)
+
 
 # initialising pygame
+pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
 clock = pygame.time.Clock()
 FPS = 60
@@ -180,6 +202,8 @@ lime = (175, 215, 70)
 grass_colour = (167, 209, 61)
 
 # main game
+game_font = pygame.font.Font('Font/PoetsenOne-Regular.ttf', 25)
+game_over_font = pygame.font.Font('Font/PoetsenOne-Regular.ttf', 75)
 main_game = Main()
 
 # main loop
@@ -189,6 +213,17 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if event.type == SCREEN_UPDATE:
+            main_game.update()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
+                main_game.snake.direction = Vector2(0,-1)
+            if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
+                main_game.snake.direction = Vector2(0,1)
+            if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
+                main_game.snake.direction = Vector2(1,0)
+            if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
+                main_game.snake.direction = Vector2(-1,0)
 
     # drawing
     screen.fill(lime)
